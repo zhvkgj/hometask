@@ -4,8 +4,6 @@
 #include <fstream>
 #include <iostream>
 #include <thread>
-#include <condition_variable>
-#include <mutex>
 #include <chrono> //for sleep_for(usec)
 
 const int SIZE = 9;
@@ -16,13 +14,7 @@ class Sudoku
 private:
 	int table[SIZE][SIZE];
 	bool	isSolved = false;
-	bool	canBeSolve = true;
-	//mutex	myMutex;
-	//condition_variable threadSignal;
-	//bool predicate ()
-	//{
-	//	return !isSolved;
-	//}
+	bool	canBeSolved = true;
 
 public:
 	// field game constructor 
@@ -57,8 +49,7 @@ public:
 		{
 			for (int j = 0; j < SIZE; j++) 
 			{
-				if (table[i][j] == ' ') tempStr.push_back(' ');
-				else tempStr.push_back(table[i][j] + '0');
+				tempStr.push_back(table[i][j] + '0');
 			}
 			fout << tempStr <<'\n';
 			tempStr.clear();
@@ -74,9 +65,9 @@ public:
 		for (int i = 0; i < SIZE; i++)
 		{
 			//check for match in row
-			if (table[row][i] == number) return true;
+			if (i != colomn && table[row][i] == number) return true;
 			//check for match in colomn
-			if (table[i][colomn] == number) return true;
+			if (i != row && table[i][colomn] == number) return true;
 		}
 
 		// check for match in square
@@ -87,7 +78,7 @@ public:
 		{
 			for (int j = firstSide; j < (firstSide + 3); j++)
 			{
-				if (table[j][i] == number) return true;
+				if (i != colomn && j != row && table[j][i] == number) return true;
 			}
 		}
 
@@ -99,24 +90,20 @@ public:
 	void solutionInspector()
 	{
 		// printing Calculating
-		//   while other thread is searching solution
-		while (true) 
+		//   while other thread is searching solution 
+		while (isSolved == false & canBeSolved == true) 
 		{
-			//std::unique_lock <mutex> ulm (myMutex);
-			//threadSignal.wait(ulm, predicate);
-			if (isSolved) return;
-			if (!canBeSolve)
-			{
-				std::cout << "Unsolvable!\n";
-				return;
-			}
 			std::cout << "Calculating...\n";
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			system("cls");
 		}
-
-		std::cout << "Solved!\n";
-		printSolution();
+		if (isSolved)
+		{
+			std::cout << "Solved!\n" <<"Runtime - " << clock() / 1000.0 << '\n';
+			std::cout << "Check solution in test_result.txt !\n";
+			printSolution();
+		}
+		else std::cout << "No solution!\n";
 	}
 
 	void solveSearching(int firstIndex, int secondIndex)
@@ -128,21 +115,25 @@ public:
 			isSolved = true;
 			return;
 		}
+		
 		//this means that current cell is empty
 		if (table[firstIndex][secondIndex] == 0)
 		{
-			for (int i = 1; i < MAX_DIGIT; i++)
+			for (int i = 1; i <= MAX_DIGIT; i++)
 			{
-				table[firstIndex][secondIndex] = i;
 				if (!checkAvailability(i, firstIndex, secondIndex))
 				{
+					table[firstIndex][secondIndex] = i;
 					// if not end of row
-					if (secondIndex != SIZE - 1)
+					if (secondIndex != (SIZE - 1))
 						solveSearching(firstIndex, secondIndex + 1);
 					// else go to the new row
 					else solveSearching(firstIndex + 1, secondIndex - SIZE + 1);
+					//if we have solution we should exit recursion
+					if (isSolved) return;
+
+					table[firstIndex][secondIndex] = 0;
 				}
-				table[firstIndex][secondIndex] = 0;
 			}
 
 		}
@@ -150,7 +141,7 @@ public:
 		else
 		{
 			// if not end of row
-			if (secondIndex != SIZE - 1)
+			if (secondIndex != (SIZE - 1))
 				solveSearching(firstIndex, secondIndex + 1);
 			// else go to the new row
 			else solveSearching(firstIndex + 1, secondIndex - SIZE + 1);
@@ -164,20 +155,14 @@ public:
 		if (isSolved) return;
 		// if sudoku is not solved
 		//   we should stop solutionInspector thread
-		canBeSolve = false;
-		return;
+		else canBeSolved = false;
 	}
-	//add timer in .cpp
 	
 };
 
 void threadFunction1(Sudoku &sud)
 {
 	sud.solutionInspector();
-}
-void threadFunction2(Sudoku &sud)
-{
-	sud.solve();
 }
 
 #endif __SUDOKU_SOLVER_H__
