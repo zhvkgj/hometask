@@ -86,7 +86,7 @@ public:
 	}
 
 	// working in own thread and waiting signal from 
-	//	 condition_variable object about solution
+	//	 solver about solution
 	void solutionInspector()
 	{
 		// printing Calculating
