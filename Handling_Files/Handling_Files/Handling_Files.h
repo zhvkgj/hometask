@@ -12,6 +12,7 @@ class Files
 {
 private:
 	std::vector <std::pair<std::string, bool>> myFiles;
+	bool access = true;
 
 public:
 	Files() = default;
